@@ -47,19 +47,23 @@ func (mh *MessageHandler) SendMoodKeyboard(chatID int64) error {
 	msg := tgbotapi.NewMessage(chatID, prompt)
 	
 	// Translate button labels
-	funText, _ := mh.translator.TranslateText(ctx, "Fun", userLang)
+	funnyText, _ := mh.translator.TranslateText(ctx, "Funny", userLang)
 	inspiringText, _ := mh.translator.TranslateText(ctx, "Inspiring", userLang) 
-	motivatingText, _ := mh.translator.TranslateText(ctx, "Motivating", userLang)
-	casualText, _ := mh.translator.TranslateText(ctx, "Casual", userLang)
+	educationalText, _ := mh.translator.TranslateText(ctx, "Educational", userLang)
+	relaxingText, _ := mh.translator.TranslateText(ctx, "Relaxing", userLang)
+	adventurousText, _ := mh.translator.TranslateText(ctx, "Adventurous", userLang)
+	thoughtfulText, _ := mh.translator.TranslateText(ctx, "Thoughtful", userLang)
 	
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(funText+" 🎉", "fun"),
+			tgbotapi.NewInlineKeyboardButtonData(funnyText+" 😂", "funny"),
 			tgbotapi.NewInlineKeyboardButtonData(inspiringText+" 💡", "inspiring"),
+			tgbotapi.NewInlineKeyboardButtonData(educationalText+" 📚", "educational"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(motivatingText+" 💪", "motivating"),
-			tgbotapi.NewInlineKeyboardButtonData(casualText+" 😌", "casual"),
+			tgbotapi.NewInlineKeyboardButtonData(relaxingText+" 🌿", "relaxing"),
+			tgbotapi.NewInlineKeyboardButtonData(adventurousText+" 🌟", "adventurous"),
+			tgbotapi.NewInlineKeyboardButtonData(thoughtfulText+" 🤔", "thoughtful"),
 		),
 	)
 	msg.ReplyMarkup = keyboard
@@ -148,11 +152,12 @@ func (mh *MessageHandler) HandleSurprise(chatID int64) {
 
 	// Random categories with their corresponding content fetchers and image queries
 	categories := []models.ContentCategory{
-		{Name: "fun", ImageQuery: "funny"},
+		{Name: "funny", ImageQuery: "funny"},
 		{Name: "inspiring", ImageQuery: "inspiration"},
-		{Name: "motivating", ImageQuery: "motivation"},
-		{Name: "casual", ImageQuery: "nature"},
-		{Name: "random_fact", ImageQuery: "surprise"},
+		{Name: "educational", ImageQuery: "books"},
+		{Name: "relaxing", ImageQuery: "nature"},
+		{Name: "adventurous", ImageQuery: "adventure"},
+		{Name: "thoughtful", ImageQuery: "meditation"},
 	}
 
 	// Pick random category
@@ -164,10 +169,12 @@ func (mh *MessageHandler) HandleSurprise(chatID int64) {
 
 	// Fetch content based on category
 	switch chosen.Name {
-	case "fun":
+	case "funny":
 		body, fetchErr = fetchers.FetchJoke(ctx)
-	case "inspiring", "motivating":
+	case "inspiring", "relaxing", "thoughtful":
 		body, fetchErr = fetchers.FetchZenQuote(ctx)
+	case "educational", "adventurous":
+		body, fetchErr = fetchers.FetchFact(ctx)
 	default:
 		body, fetchErr = fetchers.FetchFact(ctx)
 	}
@@ -232,26 +239,30 @@ func (mh *MessageHandler) HandleMoodSelection(data string, chatID int64) {
 	var imageQuery string
 
 	switch data {
-	case "fun":
-		contentType = "fun"
+	case "funny":
+		contentType = "funny"
 		imageQuery = "funny"
-		// Alternate between joke and fun-fact
 		body, fetchErr = fetchers.FetchJoke(ctx)
-		if fetchErr != nil {
-			body, fetchErr = fetchers.FetchFact(ctx)
-		}
 	case "inspiring":
 		contentType = "inspiring"
 		imageQuery = "inspiration"
 		body, fetchErr = fetchers.FetchZenQuote(ctx)
-	case "motivating":
-		contentType = "motivating"
-		imageQuery = "motivation"
-		body, fetchErr = fetchers.FetchZenQuote(ctx)
-	case "casual":
-		contentType = "casual"
-		imageQuery = "nature"
+	case "educational":
+		contentType = "educational"
+		imageQuery = "books"
 		body, fetchErr = fetchers.FetchFact(ctx)
+	case "relaxing":
+		contentType = "relaxing"
+		imageQuery = "nature"
+		body, fetchErr = fetchers.FetchZenQuote(ctx)
+	case "adventurous":
+		contentType = "adventurous"
+		imageQuery = "adventure"
+		body, fetchErr = fetchers.FetchFact(ctx)
+	case "thoughtful":
+		contentType = "thoughtful"
+		imageQuery = "meditation"
+		body, fetchErr = fetchers.FetchZenQuote(ctx)
 	default:
 		body = "I don't know that mood yet."
 		contentType = "unknown"
