@@ -11,6 +11,7 @@ A Telegram bot that delivers personalized content based on your current mood. Ge
   - Interesting facts from Useless Facts API
   - Beautiful images from Unsplash API
 - **Interactive Voting**: Rate content with thumbs up/down to help improve recommendations
+- **Personal Favorites**: Save content you love with the ⭐ button and access them anytime with `/favorites`
 - **Surprise Mode**: Get random content when you're feeling adventurous
 - **Clean Interface**: Simple inline keyboard navigation
 
@@ -18,6 +19,7 @@ A Telegram bot that delivers personalized content based on your current mood. Ge
 
 - `/start` - Display the main mood selection menu
 - `/surprise` - Get random content from any category
+- `/favorites` - View and manage your saved favorites
 - `/help` - Show available commands and usage instructions
 
 ## 🛠️ Setup
@@ -65,6 +67,8 @@ moodbot/
 │   └── api_clients.go
 ├── voting/              # Vote management system
 │   └── vote_manager.go
+├── favorites/           # Favorite content management
+│   └── favorite_manager.go
 └── go.mod              # Go module dependencies
 ```
 
@@ -75,8 +79,9 @@ The bot is built with a modular architecture:
 - **Main Loop**: Handles Telegram updates and routes commands/callbacks
 - **Message Handlers**: Process user interactions and send appropriate responses  
 - **Vote Manager**: Tracks user feedback on content
+- **Favorite Manager**: Stores and retrieves user's saved content
 - **API Fetchers**: Retrieve content from external APIs
-- **Models**: Define data structures for quotes, jokes, facts, and images
+- **Models**: Define data structures for quotes, jokes, facts, images, and favorites
 
 ## 🌐 External APIs Used
 

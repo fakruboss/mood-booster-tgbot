@@ -41,3 +41,16 @@ type ContentCategory struct {
 	Name       string
 	ImageQuery string
 }
+
+// Favorite represents a user's saved content
+type Favorite struct {
+	ID        string    `json:"id"`
+	UserID    int64     `json:"user_id"`
+	Type      string    `json:"type"` // "quote", "joke", "fact", "image"
+	Content   string    `json:"content"`
+	Author    string    `json:"author,omitempty"`
+	Setup     string    `json:"setup,omitempty"`     // for jokes
+	Punchline string    `json:"punchline,omitempty"` // for jokes
+	ImageURL  string    `json:"image_url,omitempty"` // for images
+	SavedAt   int64     `json:"saved_at"`
+}

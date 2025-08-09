@@ -29,6 +29,7 @@ func (vm *VoteManager) CreateVotingKeyboard(contentType string, messageID int) t
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("👍", fmt.Sprintf("vote_%s_%d_up", contentType, messageID)),
 			tgbotapi.NewInlineKeyboardButtonData("👎", fmt.Sprintf("vote_%s_%d_down", contentType, messageID)),
+			tgbotapi.NewInlineKeyboardButtonData("⭐", "favorite_add"),
 		),
 	)
 }

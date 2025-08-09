@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/you/moodbot/favorites"
 	"github.com/you/moodbot/handlers"
 	"github.com/you/moodbot/voting"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -24,7 +25,8 @@ func main() {
 
 	// Initialize managers and handlers
 	voteManager := voting.NewVoteManager()
-	messageHandler := handlers.NewMessageHandler(bot, voteManager)
+	favoriteManager := favorites.NewFavoriteManager()
+	messageHandler := handlers.NewMessageHandler(bot, voteManager, favoriteManager)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -39,6 +41,8 @@ func main() {
 					_ = messageHandler.SendMoodKeyboard(update.Message.Chat.ID)
 				case "surprise":
 					messageHandler.HandleSurprise(update.Message.Chat.ID)
+				case "favorites", "favorite":
+					messageHandler.SendFavorites(update.Message.Chat.ID, update.Message.From.ID)
 				case "help":
 					messageHandler.SendHelpMessage(update.Message.Chat.ID)
 				default:
@@ -56,6 +60,19 @@ func main() {
 			// Handle voting
 			if voteManager.IsVoteCallback(data) {
 				cb := tgbotapi.NewCallback(update.CallbackQuery.ID, voteManager.HandleVote(data, userID))
+				_, _ = bot.Request(cb)
+				continue
+			}
+
+			// Handle favorites
+			if favoriteManager.IsFavoriteCallback(data) {
+				originalContent := ""
+				if update.CallbackQuery.Message.Caption != "" {
+					originalContent = update.CallbackQuery.Message.Caption
+				} else {
+					originalContent = update.CallbackQuery.Message.Text
+				}
+				cb := tgbotapi.NewCallback(update.CallbackQuery.ID, messageHandler.HandleFavoriteCallback(data, userID, originalContent))
 				_, _ = bot.Request(cb)
 				continue
 			}
