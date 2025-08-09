@@ -5,6 +5,7 @@ A Telegram bot that delivers personalized content based on your current mood. Ge
 ## ✨ Features
 
 - **Mood-based Content**: Choose from different moods (Fun, Inspiring, Motivating, Casual) to get relevant content
+- **Multi-language Support**: Content available in English, Hindi (हिंदी), and Tamil (தமிழ்) with automatic translation
 - **Multiple Content Types**: 
   - Inspirational quotes from ZenQuotes API
   - Funny jokes from Official Joke API  
@@ -20,6 +21,7 @@ A Telegram bot that delivers personalized content based on your current mood. Ge
 - `/start` - Display the main mood selection menu
 - `/surprise` - Get random content from any category
 - `/favorites` - View and manage your saved favorites
+- `/language` - Change your language preference (shows available languages excluding current)
 - `/help` - Show available commands and usage instructions
 
 ## 🛠️ Setup
@@ -43,9 +45,11 @@ A Telegram bot that delivers personalized content based on your current mood. Ge
    go mod download
    ```
 
-3. Set your Telegram Bot Token:
+3. Set your environment variables:
    ```bash
    export TELEGRAM_BOT_TOKEN="your_bot_token_here"
+   # Optional: For images  
+   export UNSPLASH_ACCESS_KEY="your_unsplash_access_key"
    ```
 
 4. Build and run:
@@ -69,6 +73,9 @@ moodbot/
 │   └── vote_manager.go
 ├── favorites/           # Favorite content management
 │   └── favorite_manager.go
+├── translation/         # Multi-language support
+│   ├── translator.go   
+│   └── language_manager.go
 └── go.mod              # Go module dependencies
 ```
 
@@ -80,6 +87,7 @@ The bot is built with a modular architecture:
 - **Message Handlers**: Process user interactions and send appropriate responses  
 - **Vote Manager**: Tracks user feedback on content
 - **Favorite Manager**: Stores and retrieves user's saved content
+- **Translation System**: Provides multi-language support with user preferences
 - **API Fetchers**: Retrieve content from external APIs
 - **Models**: Define data structures for quotes, jokes, facts, images, and favorites
 
@@ -89,6 +97,7 @@ The bot is built with a modular architecture:
 - **Official Joke API**: Clean, family-friendly jokes
 - **Useless Facts API**: Interesting random facts
 - **Unsplash API**: High-quality stock photos
+- **MyMemory Translation API**: Free multi-language translation support
 
 ## 🤝 Contributing
 
