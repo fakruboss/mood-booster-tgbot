@@ -49,3 +49,6 @@ Thumbs.db
 # Build artifacts
 dist/
 build/
+
+# Claude Code folder
+.claude/
