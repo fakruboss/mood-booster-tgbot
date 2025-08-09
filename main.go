@@ -6,6 +6,7 @@ import (
 
 	"github.com/you/moodbot/favorites"
 	"github.com/you/moodbot/handlers"
+	"github.com/you/moodbot/translation"
 	"github.com/you/moodbot/voting"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -26,7 +27,9 @@ func main() {
 	// Initialize managers and handlers
 	voteManager := voting.NewVoteManager()
 	favoriteManager := favorites.NewFavoriteManager()
-	messageHandler := handlers.NewMessageHandler(bot, voteManager, favoriteManager)
+	translator := translation.NewTranslator()
+	languageManager := translation.NewLanguageManager("user_data")
+	messageHandler := handlers.NewMessageHandler(bot, voteManager, favoriteManager, translator, languageManager)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -43,6 +46,8 @@ func main() {
 					messageHandler.HandleSurprise(update.Message.Chat.ID)
 				case "favorites", "favorite":
 					messageHandler.SendFavorites(update.Message.Chat.ID, update.Message.From.ID)
+				case "language", "lang":
+					messageHandler.SendLanguageKeyboard(update.Message.Chat.ID)
 				case "help":
 					messageHandler.SendHelpMessage(update.Message.Chat.ID)
 				default:
@@ -60,6 +65,14 @@ func main() {
 			// Handle voting
 			if voteManager.IsVoteCallback(data) {
 				cb := tgbotapi.NewCallback(update.CallbackQuery.ID, voteManager.HandleVote(data, userID))
+				_, _ = bot.Request(cb)
+				continue
+			}
+
+			// Handle language selection
+			if data == "lang_en" || data == "lang_hi" || data == "lang_ta" {
+				response := messageHandler.HandleLanguageSelection(data, chatID, userID)
+				cb := tgbotapi.NewCallback(update.CallbackQuery.ID, response)
 				_, _ = bot.Request(cb)
 				continue
 			}

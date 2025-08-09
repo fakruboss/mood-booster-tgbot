@@ -9,6 +9,7 @@ import (
 	"github.com/you/moodbot/favorites"
 	"github.com/you/moodbot/fetchers"
 	"github.com/you/moodbot/models"
+	"github.com/you/moodbot/translation"
 	"github.com/you/moodbot/voting"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -18,33 +19,126 @@ type MessageHandler struct {
 	bot             *tgbotapi.BotAPI
 	voteManager     *voting.VoteManager
 	favoriteManager *favorites.FavoriteManager
+	translator      *translation.Translator
+	languageManager *translation.LanguageManager
 }
 
 // NewMessageHandler creates a new message handler
-func NewMessageHandler(bot *tgbotapi.BotAPI, voteManager *voting.VoteManager, favoriteManager *favorites.FavoriteManager) *MessageHandler {
+func NewMessageHandler(bot *tgbotapi.BotAPI, voteManager *voting.VoteManager, favoriteManager *favorites.FavoriteManager, translator *translation.Translator, languageManager *translation.LanguageManager) *MessageHandler {
 	return &MessageHandler{
 		bot:             bot,
 		voteManager:     voteManager,
 		favoriteManager: favoriteManager,
+		translator:      translator,
+		languageManager: languageManager,
 	}
 }
 
 // SendMoodKeyboard sends the main mood selection keyboard
 func (mh *MessageHandler) SendMoodKeyboard(chatID int64) error {
-	msg := tgbotapi.NewMessage(chatID, "What's your mood today?")
+	userLang := mh.languageManager.GetUserLanguage(chatID)
+	
+	// Translate the prompt
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	
+	prompt, _ := mh.translator.TranslateText(ctx, "What's your mood today?", userLang)
+	
+	msg := tgbotapi.NewMessage(chatID, prompt)
+	
+	// Translate button labels
+	funText, _ := mh.translator.TranslateText(ctx, "Fun", userLang)
+	inspiringText, _ := mh.translator.TranslateText(ctx, "Inspiring", userLang) 
+	motivatingText, _ := mh.translator.TranslateText(ctx, "Motivating", userLang)
+	casualText, _ := mh.translator.TranslateText(ctx, "Casual", userLang)
+	
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("Fun 🎉", "fun"),
-			tgbotapi.NewInlineKeyboardButtonData("Inspiring 💡", "inspiring"),
+			tgbotapi.NewInlineKeyboardButtonData(funText+" 🎉", "fun"),
+			tgbotapi.NewInlineKeyboardButtonData(inspiringText+" 💡", "inspiring"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("Motivating 💪", "motivating"),
-			tgbotapi.NewInlineKeyboardButtonData("Casual 😌", "casual"),
+			tgbotapi.NewInlineKeyboardButtonData(motivatingText+" 💪", "motivating"),
+			tgbotapi.NewInlineKeyboardButtonData(casualText+" 😌", "casual"),
 		),
 	)
 	msg.ReplyMarkup = keyboard
 	_, err := mh.bot.Send(msg)
 	return err
+}
+
+// SendLanguageKeyboard sends language selection keyboard (excluding current language)
+func (mh *MessageHandler) SendLanguageKeyboard(chatID int64) {
+	currentLang := mh.languageManager.GetUserLanguage(chatID)
+	
+	// Create keyboard with available languages (excluding current)
+	var buttons [][]tgbotapi.InlineKeyboardButton
+	
+	if currentLang != translation.English {
+		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData("English 🇺🇸", "lang_en"),
+		})
+	}
+	
+	if currentLang != translation.Hindi {
+		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData("हिंदी 🇮🇳", "lang_hi"),
+		})
+	}
+	
+	if currentLang != translation.Tamil {
+		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData("தமிழ் 🇮🇳", "lang_ta"),
+		})
+	}
+	
+	// If somehow no other languages available, show current status
+	if len(buttons) == 0 {
+		var currentLangName string
+		switch currentLang {
+		case translation.English:
+			currentLangName = "English 🇺🇸"
+		case translation.Hindi:
+			currentLangName = "हिंदी 🇮🇳"
+		case translation.Tamil:
+			currentLangName = "தமிழ் 🇮🇳"
+		}
+		msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Current language: %s", currentLangName))
+		mh.bot.Send(msg)
+		return
+	}
+	
+	msg := tgbotapi.NewMessage(chatID, "🌍 Choose your preferred language / अपनी भाषा चुनें / உங்கள் மொழியைத் தேர்ந்தெடுக்கவும்:")
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(buttons...)
+	msg.ReplyMarkup = keyboard
+	mh.bot.Send(msg)
+}
+
+// HandleLanguageSelection handles language selection callbacks
+func (mh *MessageHandler) HandleLanguageSelection(data string, chatID, userID int64) string {
+	var selectedLang translation.Language
+	var response string
+	
+	switch data {
+	case "lang_en":
+		selectedLang = translation.English
+		response = "✅ Language set to English!"
+	case "lang_hi":
+		selectedLang = translation.Hindi
+		response = "✅ भाषा हिंदी में सेट की गई!"
+	case "lang_ta":
+		selectedLang = translation.Tamil
+		response = "✅ மொழி தமிழில் அமைக்கப்பட்டது!"
+	default:
+		return "Unknown language selection"
+	}
+	
+	err := mh.languageManager.SetUserLanguage(userID, selectedLang)
+	if err != nil {
+		return "Error saving language preference"
+	}
+	
+	return response
 }
 
 // HandleSurprise handles the /surprise command
@@ -88,16 +182,26 @@ func (mh *MessageHandler) HandleSurprise(chatID int64) {
 		body = "🎲 Surprise! Something unexpected happened - I couldn't fetch content right now. Try again!"
 	}
 
-	mh.sendContentWithImage(chatID, "🎲 **SURPRISE!** "+body, chosen.ImageQuery, "surprise")
+	// Translate content before sending
+	userLang := mh.languageManager.GetUserLanguage(chatID)
+	translatedBody, _ := mh.translator.TranslateText(ctx, body, userLang)
+	surpriseText, _ := mh.translator.TranslateText(ctx, "🎲 **SURPRISE!** ", userLang)
+	
+	mh.sendContentWithImage(chatID, surpriseText+translatedBody, chosen.ImageQuery, "surprise")
 }
 
 // SendHelpMessage sends the help message with available commands
 func (mh *MessageHandler) SendHelpMessage(chatID int64) {
+	userLang := mh.languageManager.GetUserLanguage(chatID)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	
 	helpText := `🤖 **MoodBot Commands:**
 
 /start - Choose your mood and get personalized content
 /surprise - Get completely random content (jokes, quotes, or facts)
 /favorites - View and manage your saved favorites
+/language - Change your language preference
 /help - Show this help message
 
 **How it works:**
@@ -109,7 +213,9 @@ func (mh *MessageHandler) SendHelpMessage(chatID int64) {
 
 Enjoy your mood-boosting content! 🎉`
 
-	msg := tgbotapi.NewMessage(chatID, helpText)
+	translatedHelp, _ := mh.translator.TranslateText(ctx, helpText, userLang)
+	
+	msg := tgbotapi.NewMessage(chatID, translatedHelp)
 	msg.ParseMode = "Markdown"
 	mh.bot.Send(msg)
 }
@@ -156,7 +262,12 @@ func (mh *MessageHandler) HandleMoodSelection(data string, chatID int64) {
 		body = "Sorry, couldn't fetch content right now. Try again."
 	}
 
-	mh.sendContentWithImage(chatID, body, imageQuery, contentType)
+	// Translate content before sending  
+	userLang := mh.languageManager.GetUserLanguage(chatID)
+	translatedBody, _ := mh.translator.TranslateText(ctx, body, userLang)
+	translatedBody = translation.FormatLanguageSpecificText(translatedBody, userLang)
+	
+	mh.sendContentWithImage(chatID, translatedBody, imageQuery, contentType)
 	
 	// Re-show mood keyboard
 	_ = mh.SendMoodKeyboard(chatID)
